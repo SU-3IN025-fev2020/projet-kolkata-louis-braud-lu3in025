@@ -16,7 +16,10 @@ import random
 import numpy as np
 import sys
 
-
+import aStar
+from aStar import Noeud
+import strategie
+import queue
 
     
 # ---- ---- ---- ---- ---- ----
@@ -32,7 +35,7 @@ def init(_boardname=None):
     game = Game('Cartes/' + name + '.json', SpriteBuilder)
     game.O = Ontology(True, 'SpriteSheet-32x32/tiny_spritesheet_ontology.csv')
     game.populate_sprite_names(game.O)
-    game.fps = 5  # frames per second
+    game.fps = 10  # frames per second
     game.mainiteration()
     game.mask.allow_overlaping_players = True
     #player = game.player
@@ -40,18 +43,14 @@ def init(_boardname=None):
 def main():
 
     #for arg in sys.argv:
-    iterations = 20 # default
+    iterations = 2 # default
     if len(sys.argv) == 2:
         iterations = int(sys.argv[1])
     print ("Iterations: ")
     print (iterations)
 
     init()
-    
-    
-    
 
-    
     #-------------------------------
     # Initialisation
     #-------------------------------
@@ -60,15 +59,12 @@ def main():
     print("lignes", nbLignes)
     print("colonnes", nbColonnes)
     
-    
     players = [o for o in game.layers['joueur']]
     nbPlayers = len(players)
-    
     
     # on localise tous les états initiaux (loc du joueur)
     initStates = [o.get_rowcol() for o in game.layers['joueur']]
     print ("Init states:", initStates)
-    
     
     # on localise tous les objets  ramassables (les restaurants)
     goalStates = [o.get_rowcol() for o in game.layers['ramassable']]
@@ -77,83 +73,82 @@ def main():
         
     # on localise tous les murs
     wallStates = [w.get_rowcol() for w in game.layers['obstacle']]
-    #print ("Wall states:", wallStates)
+    print ("Wall states:", wallStates)
     
     # on liste toutes les positions permises
     allowedStates = [(x,y) for x in range(nbLignes) for y in range(nbColonnes)\
-                     if (x,y) not in wallStates or  goalStates] 
+                     if (x,y) not in (wallStates + goalStates)]
+
+    dansRestaus = {r:[] for r in range(nbRestaus)}
+
+    taux = [0 for i in range(nbRestaus)]
+
+    gain = [0 for i in range(nbPlayers)]
+
+    restau = [0] * nbPlayers
+
+    posPlayers = initStates
     
     #-------------------------------
     # Placement aleatoire des joueurs, en évitant les obstacles
     #-------------------------------
-        
-    posPlayers = initStates
 
-    
-    for j in range(nbPlayers):
-        x,y = random.choice(allowedStates)
-        players[j].set_rowcol(x,y)
-        game.mainiteration()
-        posPlayers[j]=(x,y)
-
-
-        
-        
+    for i in range(iterations):
+        for j in range(nbPlayers):
+            x,y = random.choice(allowedStates)
+            players[j].set_rowcol(x,y)
+            game.mainiteration()
+            posPlayers[j]=(x,y)
     
     #-------------------------------
     # chaque joueur choisit un restaurant
     #-------------------------------
 
-    restau=[0]*nbPlayers
-    for j in range(nbPlayers):
-        c = random.randint(0,nbRestaus-1)
-        print(c)
-        restau[j]=c
-    
+        for j in range(nbPlayers):
+            if j % 2 == 0:
+                c = strategie.strategie_aleatoire(nbRestaus)
+            elif j == 1 or j == 3 or j == 5:
+                c = strategie.strategie_tetu(j, nbRestaus)
+            else:
+                c = strategie.strategie_restaurant_proche(posPlayers[j], goalStates)
+            restau[j]=c
+            dansRestaus[c].append(j)
+
     #-------------------------------
     # Boucle principale de déplacements 
     #-------------------------------
-    
-        
-    # bon ici on fait juste plusieurs random walker pour exemple...
-    
-    for i in range(iterations):
-        
-        for j in range(nbPlayers): # on fait bouger chaque joueur séquentiellement
-            row,col = posPlayers[j]
 
-            x_inc,y_inc = random.choice([(0,1),(0,-1),(1,0),(-1,0)])
-            next_row = row+x_inc
-            next_col = col+y_inc
-            # and ((next_row,next_col) not in posPlayers)
-            if ((next_row,next_col) not in wallStates) and next_row>=0 and next_row<=19 and next_col>=0 and next_col<=19:
-                players[j].set_rowcol(next_row,next_col)
-                print ("pos :", j, next_row,next_col)
+        for j in range(nbPlayers):
+            pos_restau = goalStates[restau[j]]
+            chemin = aStar.aStar(posPlayers[j], pos_restau, wallStates)
+            print(chemin)
+            while posPlayers[j] != pos_restau:
+                row, col = queue.heappop(chemin)
+                players[j].set_rowcol(row, col)
+                print ("Position du joueur : ", j, row, col)
                 game.mainiteration()
-    
-                col=next_col
-                row=next_row
-                posPlayers[j]=(row,col)
-            
-      
+                posPlayers[j]= (row,col)
+                if (row,col) == pos_restau:
+                    game.mainiteration()
+                    print ("Le joueur ", j, " est arrivé")           
+                    break
+
+        for i in range(nbRestaus):
+            if len(dansRestaus[i]) == 1 :
+                j = dansRestaus[i][0]
+                gain[j] += 1
+            elif len(dansRestaus[i]) > 1 :
+                j = random.choice(dansRestaus[i])
+                gain[j] += 1
+            taux[i] = len(dansRestaus[i])/nbPlayers
+            print("Taux du restaurant ",i," : ", taux[i])
+        dansRestaus = {r:[] for r in range(nbRestaus)}
+
+    for i in range(len(gain)):
+        print("Le gain du joueur ",i," est : ", gain[i]/iterations)
         
-            
-            # si on est à l'emplacement d'un restaurant, on s'arrête
-            if (row,col) == restau[j]:
-                #o = players[j].ramasse(game.layers)
-                game.mainiteration()
-                print ("Le joueur ", j, " est à son restaurant.")
-               # goalStates.remove((row,col)) # on enlève ce goalState de la liste
-                
-                
-                break
-            
-    
     pygame.quit()
-    
-        
-    
-   
+
 
 if __name__ == '__main__':
     main()

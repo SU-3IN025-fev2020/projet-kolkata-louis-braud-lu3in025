@@ -1,0 +1,45 @@
+Rapport du projet Kolkata par Louis BRAUD 3506798
+
+Fichiers modifiés : 
+
+    aStar.py -> Heuristique distance de Manhattan, classe Noeud ainsi que 2 versions de l'algorithme A* (avec Noeud ou avec queue).
+    stategie.py -> 3 stratégies : aléatoire, têtue ou bien le restaurant le plus proche.
+    kolkata_restaurant.py -> boucle principale de déplacement, choix des stratégies, comptage des points ainsi que de la fréquantation des restaurants.
+
+Problèmes rencontrés :
+
+    Avec l'algorithme A* utilisant les Noeud, j'ai été dans l'incapacité de faire éviter aux joueurs les obstacles.
+    En effet au lieu de les contourner, ils les traversent.
+    Le problème vient surement de la recherche des prochains noeuds.
+
+    Deuxième tentative en utilisant queue, mais par manque de temps, le programme ne fonctionne pas à tous les coups.
+
+Conclusion pour 1 jeu de test avec 20 itérations :
+
+    5 joueurs utilisent la stratégie aléatoire. (Joueurs : 0, 2, 4, 6, 8)
+    3 joueurs utilisent la stratégie têtue. (Joueurs : 1, 3, 5)
+    2 joueurs utilisent la stratégie du restaurant le plus proche. (Joueurs : 7, 9)
+
+    Le score moyen de chaque joueur (ou stratégie)
+
+        Le gain du joueur  0  est :  0.7
+        Le gain du joueur  1  est :  0.65
+        Le gain du joueur  2  est :  0.3
+        Le gain du joueur  3  est :  0.45
+        Le gain du joueur  4  est :  0.5
+        Le gain du joueur  5  est :  0.45
+        Le gain du joueur  6  est :  0.7
+        Le gain du joueur  7  est :  0.55
+        Le gain du joueur  8  est :  0.55
+        Le gain du joueur  9  est :  0.7
+
+    Le produit des scores obtenus par chaque joueur utilisant une stratégie :
+
+        Stratégie aléatoire : 0.40
+        Stratégie têtue : 0.13
+        Stratégie restaurant le plus proche : 0.38
+
+
+
+
+
